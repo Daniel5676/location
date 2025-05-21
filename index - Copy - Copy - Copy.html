@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BusGo - Smart Bus Navigation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #3563E9;
+      --primary-light: #D6E4FF;
+      --primary-dark: #1939B7;
+      --secondary: #FF4D4F;
+      --text-primary: #1A202C;
+      --text-secondary: #4A5568;
+      --text-tertiary: #718096;
+      --bg-light: #F7FAFC;
+      --bg-white: #FFFFFF;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.1), 0 5px 10px rgba(0,0,0,0.05);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 24px;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 20px;
+    }
+
+    /* Device frame */
+    .device-frame {
+      position: relative;
+      width: 375px;
+      height: 812px;
+      background-color: var(--bg-white);
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg), 0 20px 40px rgba(0, 0, 0, 0.15);
+      border: 10px solid #1A1A1A;
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: transparent;
+      z-index: 100;
+    }
+
+    .time {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-icons i {
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    /* Dynamic island */
+    .dynamic-island {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 32px;
+      background-color: #000;
+      border-radius: 20px;
+      z-index: 110;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dynamic-island::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background-color: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      right: 12px;
+    }
+
+    /* Map container */
+    .map-container {
+      position: relative;
+      width: 100%;
+      height: 60%;
+      overflow: hidden;
+    }
+
+    .map-iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Map overlay elements */
+    .map-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Current location pulse */
+    .current-location {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      pointer-events: all;
+    }
+
+    .location-dot {
+      width: 20px;
+      height: 20px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 0 2px rgba(53, 99, 233, 0.3);
+    }
+
+    .location-pulse {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 40px;
+      height: 40px;
+      background-color: rgba(53, 99, 233, 0.2);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+      }
+      70% {
+        transform: scale(2);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+    }
+
+    /* Map controls */
+    .map-controls {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      padding: 0 16px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 30;
+    }
+
+    .control-button {
+      width: 48px;
+      height: 48px;
+      background-color: var(--bg-white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-md);
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      pointer-events: all;
+    }
+
+    .control-button:hover, .control-button:focus {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .control-button i {
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .search-bar {
+      position: absolute;
+      top: 120px;
+      left: 16px;
+      right: 16px;
+      height: 56px;
+      background-color: var(--bg-white);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 30;
+      pointer-events: all;
+    }
+
+    .search-bar i {
+      font-size: 20px;
+      color: var(--text-tertiary);
+      margin-right: 12px;
+    }
+
+    .search-input {
+      flex: 1;
+      height: 100%;
+      border: none;
+      background: transparent;
+      font-size: 16px;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    /* Bottom sheet */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 45%;
+      background-color: var(--bg-white);
+      border-top-left-radius: var(--radius-lg);
+      border-top-right-radius: var(--radius-lg);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+      z-index: 50;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .bottom-sheet-handle {
+      width: 40px;
+      height: 5px;
+      background-color: #E2E8F0;
+      border-radius: 3px;
+      margin: 12px auto;
+    }
+
+    .sheet-header {
+      padding: 0 20px 12px;
+      border-bottom: 1px solid #EDF2F7;
+    }
+
+    .filter-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .filter-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--primary-light);
+      border-radius: 20px;
+      padding: 8px 16px;
+      color: var(--primary);
+      font-weight: 500;
+      font-size: 14px;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .filter-pill:hover {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .filter-pill i {
+      font-size: 14px;
+    }
+
+    .distance-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--bg-light);
+      border-radius: 20px;
+      padding: 8px 16px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .distance-filter:hover {
+      background-color: #EDF2F7;
+    }
+
+    .distance-value {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Bus stops list */
+    .bus-stops-list {
+      height: calc(100% - 80px);
+      overflow-y: auto;
+      padding: 0 20px;
+    }
+
+    .bus-stop {
+      padding: 16px 0;
+      border-bottom: 1px solid #EDF2F7;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .bus-stop:hover {
+      background-color: #F7FAFC;
+    }
+
+    .bus-stop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .bus-stop-name {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .bus-stop-icon {
+      width: 40px;
+      height: 40px;
+      background-color: var(--primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 2px 8px rgba(53, 99, 233, 0.3);
+    }
+
+    .bus-stop-icon i {
+      font-size: 20px;
+    }
+
+    .bus-stop-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 14px;
+      color: var(--text-tertiary);
+      margin-bottom: 12px;
+    }
+
+    .walking-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .walking-info i {
+      color: var(--text-secondary);
+    }
+
+    .distance {
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .bus-routes {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .bus-route {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: var(--bg-light);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+
+    .bus-route:hover {
+      background-color: #EDF2F7;
+    }
+
+    .route-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bus-number-icon {
+      width: 32px;
+      height: 32px;
+      background-color: var(--primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .bus-number-icon i {
+      font-size: 16px;
+    }
+
+    .route-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bus-number {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+
+    .destination {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    .arrival-times {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .arrival-time {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary);
+      background-color: var(--bg-white);
+      padding: 4px 10px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .promo-banner {
+      margin: 16px 0;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: var(--radius-md);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .promo-text {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .promo-button {
+      background-color: white;
+      color: var(--primary);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .promo-button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Bottom navigation */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background-color: var(--bg-white);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #EDF2F7;
+      padding-bottom: 20px;
+      z-index: 60;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      gap: 6px;
+      transition: var(--transition);
+    }
+
+    .nav-item i {
+      font-size: 22px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    /* Home indicator */
+    .home-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 134px;
+      height: 5px;
+      background-color: #000;
+      border-radius: 3px;
+      z-index: 70;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 400px) {
+      .device-frame {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+      }
+      
+      .dynamic-island,
+      .home-indicator {
+        display: none;
+      }
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .bus-stop {
+      animation: fadeIn 0.3s ease-out;
+      animation-fill-mode: both;
+    }
+
+    .bus-stop:nth-child(1) { animation-delay: 0.1s; }
+    .bus-stop:nth-child(2) { animation-delay: 0.2s; }
+    .bus-stop:nth-child(3) { animation-delay: 0.3s; }
+  </style>
+</head>
+<body>
+  <div class="device-frame">
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span class="time" id="current-time"></span>
+      <div class="status-icons">
+        <i class="fas fa-signal"></i>
+        <i class="fas fa-wifi"></i>
+        <i class="fas fa-battery-three-quarters"></i>
+      </div>
+    </div>
+    
+    <!-- Dynamic island -->
+    <div class="dynamic-island"></div>
+    
+    <!-- Map container -->
+    <div class="map-container">
+      <iframe 
+        class="map-iframe"
+        src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d2088.81448707683!2d6.980397682548261!3d4.799419740702103!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sng!4v1747762789298!5m2!1sen!2sng" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" 
+        allowfullscreen="" 
+        loading="lazy" 
+        referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
+      
+      <div class="map-overlay">
+        <!-- Current location marker -->
+        <div class="current-location">
+          <div class="location-dot"></div>
+          <div class="location-pulse"></div>
+        </div>
+      </div>
+      
+      <!-- Map controls -->
+      <div class="map-controls">
+        <button class="control-button">
+          <i class="fas fa-bars"></i>
+        </button>
+        <button class="control-button">
+          <i class="fas fa-location-crosshairs"></i>
+        </button>
+      </div>
+      
+      <!-- Search bar -->
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" class="search-input" placeholder="Search for bus stops or routes">
+      </div>
+    </div>
+    
+    <!-- Bottom sheet with bus stops -->
+    <div class="bottom-sheet">
+      <div class="bottom-sheet-handle"></div>
+      
+      <div class="sheet-header">
+        <div class="filter-options">
+          <div class="filter-pill">
+            <i class="fas fa-bus"></i>
+            <span>Bus</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+          <div class="distance-filter">
+            <span>Display within</span>
+            <span class="distance-value">1 km</span>
+            <i class="fas fa-chevron-down"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Bus stops list -->
+      <div class="bus-stops-list">
+        <!-- Bus stop 1 -->
+        <div class="bus-stop">
+          <div class="bus-stop-header">
+            <h3 class="bus-stop-name">River state uiversity of science and technology</h3>
+            <div class="bus-stop-icon">
+              <i class="fas fa-bus"></i>
+            </div>
+          </div>
+          <div class="bus-stop-info">
+            <div class="walking-info">
+              <i class="fas fa-walking"></i>
+              <span>Faculty of managment science</span>
+            </div>
+            <div class="distance">1 km</div>
+          </div>
+          <div class="bus-routes">
+            <div class="bus-route">
+              <div class="route-info">
+                <div class="bus-number-icon">
+                  <i class="fas fa-bus"></i>
+                </div>
+                <div class="route-details">
+                  <span class="bus-number">MILE-3</span>
+                  <span class="destination">AGIP</span>
+                </div>
+              </div>
+              <div class="arrival-times">
+                <span class="arrival-time">5 min</span>
+              </div>
+            </div>
+            <div class="bus-route">
+              <div class="route-info">
+                <div class="bus-number-icon">
+                  <i class="fas fa-bus"></i>
+                </div>
+                <div class="route-details">
+                  <span class="bus-number">Express Route</span>
+                  <span class="destination">Port Harcourt City</span>
+                </div>
+              </div>
+              <div class="arrival-times">
+                <span class="arrival-time">12 min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Promo banner -->
+        <div class="promo-banner">
+          <div class="promo-text">20% off delivery fee today!</div>
+          <button class="promo-button">Get Discount</button>
+        </div>
+        
+        <!-- Bus stop 2 -->
+        <div class="bus-stop">
+          <div class="bus-stop-header">
+            <h3 class="bus-stop-name">MILE-3 BUS STOP</h3>
+            <div class="bus-stop-icon">
+              <i class="fas fa-bus"></i>
+            </div>
+          </div>
+          <div class="bus-stop-info">
+            <div class="walking-info">
+              <i class="fas fa-walking"></i>
+              <span></span>
+            </div>
+            <div class="distance">1.5 km</div>
+          </div>
+          <div class="bus-routes">
+            <div class="bus-route">
+              <div class="route-info">
+                <div class="bus-number-icon">
+                  <i class="fas fa-bus"></i>
+                </div>
+                <div class="route-details">
+                  <span class="bus-number">City Express</span>
+                  <span class="destination"></span>
+                </div>
+              </div>
+              <div class="arrival-times">
+                <span class="arrival-time">3 min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+   <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="#services" class="nav-item">
+            <i class="fas fa-print"></i>
+            <span>Services</span>
+        </a>
+        <a href="#contact" class="nav-item active">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Location</span>
+        </a>
+        <a href="https://wa.me/message/2DEU3RUU33QEF1" class="nav-item">
+            <i class="fab fa-whatsapp"></i>
+            <span>Contact</span>
+        </a>
+    </nav>
+    
+    <!-- Home indicator -->
+    <div class="home-indicator"></div>
+  </div>
+
+  <script>
+    // Update time in status bar
+    function updateTime() {
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      
+      // Format hours and minutes
+      hours = hours < 10 ? '0' + hours : hours;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      
+      document.getElementById('current-time').textContent = `${hours}:${minutes}`;
+    }
+    
+    // Update time immediately and then every minute
+    updateTime();
+    setInterval(updateTime, 60000);
+    
+    // Simulate bottom sheet interaction
+    const bottomSheet = document.querySelector('.bottom-sheet');
+    const handle = document.querySelector('.bottom-sheet-handle');
+    
+    let startY, startHeight;
+    
+    handle.addEventListener('touchstart', function(e) {
+      startY = e.touches[0].clientY;
+      startHeight = parseInt(getComputedStyle(bottomSheet).height, 10);
+      document.addEventListener('touchmove', onDrag);
+      document.addEventListener('touchend', stopDrag);
+    });
+    
+    handle.addEventListener('mousedown', function(e) {
+      startY = e.clientY;
+      startHeight = parseInt(getComputedStyle(bottomSheet).height, 10);
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', stopDrag);
+    });
+    
+    function onDrag(e) {
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      const deltaY = y - startY;
+      const newHeight = Math.max(100, Math.min(startHeight - deltaY, window.innerHeight * 0.9));
+      bottomSheet.style.height = `${newHeight}px`;
+    }
+    
+    function stopDrag() {
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('touchmove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchend', stopDrag);
+    }
+  </script>
+</body>
+</html>

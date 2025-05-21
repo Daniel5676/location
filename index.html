@@ -370,6 +370,9 @@
       font-weight: 700;
       font-size: 18px;
       color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .bus-stop-icon {
@@ -467,6 +470,9 @@
     .destination {
       font-size: 13px;
       color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .arrival-times {
@@ -600,13 +606,13 @@
 <body>
   <div class="device-frame">
     <!-- Status bar -->
-    <!--<div class="status-bar">
+    <div class="status-bar">
       <span class="time" id="current-time"></span>
       <div class="status-icons">
         <i class="fas fa-signal"></i>
         <i class="fas fa-wifi"></i>
         <i class="fas fa-battery-three-quarters"></i>
-      </div>-->
+      </div>
     </div>
     
     <!-- Dynamic island -->
@@ -690,12 +696,12 @@
                   <i class="fas fa-bus"></i>
                 </div>
                 <div class="route-details">
-                  <span class="bus-number">MILE-3</span>
+                  <span class="bus-number">Order number 1</span>
                   <span class="destination">AGIP</span>
                 </div>
               </div>
               <div class="arrival-times">
-                <span class="arrival-time">5 min</span>
+                <span class="arrival-time">30 min</span>
               </div>
             </div>
             <div class="bus-route">
@@ -704,8 +710,8 @@
                   <i class="fas fa-bus"></i>
                 </div>
                 <div class="route-details">
-                  <span class="bus-number">Express Route</span>
-                  <span class="destination">Port Harcourt City</span>
+                  <span class="bus-number">Order number 2</span>
+                  <span class="destination">water-line</span>
                 </div>
               </div>
               <div class="arrival-times">
@@ -756,24 +762,24 @@
       </div>
     </div>
     
-   <!-- Bottom Navigation -->
+    <!-- Bottom Navigation -->
     <nav class="bottom-nav">
-        <a href="#" class="nav-item">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
-        <a href="#services" class="nav-item">
-            <i class="fas fa-print"></i>
-            <span>Services</span>
-        </a>
-        <a href="#contact" class="nav-item active">
-            <i class="fas fa-map-marker-alt"></i>
-            <span>Location</span>
-        </a>
-        <a href="https://wa.me/message/2DEU3RUU33QEF1" class="nav-item">
-            <i class="fab fa-whatsapp"></i>
-            <span>Contact</span>
-        </a>
+      <a href="#" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+      </a>
+      <a href="#services" class="nav-item">
+        <i class="fas fa-print"></i>
+        <span>Services</span>
+      </a>
+      <a href="#contact" class="nav-item active">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>Location</span>
+      </a>
+      <a href="https://wa.me/message/2DEU3RUU33QEF1" class="nav-item">
+        <i class="fab fa-whatsapp"></i>
+        <span>Contact</span>
+      </a>
     </nav>
     
     <!-- Home indicator -->
